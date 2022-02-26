@@ -39,6 +39,7 @@ impl Mul<f32> for Vec3 {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32

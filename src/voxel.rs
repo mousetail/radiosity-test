@@ -115,11 +115,16 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[u16; SIZE]; SIZE]; SIZE], fil
                             positions.extend(cube.vertices.map(|x| x * (1.0 / SIZE as f32) + base_position));
                             normals.extend(cube.normals);
                             indexes.extend(cube.indices.map(|x| x + length));
+
+                            let texture_offset = Vec2 {
+                                x: (voxels[x][y][z] / 16) as f32 / 16.,
+                                y: (voxels[x][y][z] % 16) as f32 / 16.,
+                            };
                             texture_coordinates.extend([
-                                Vec2 { x: 0., y: 0. },
-                                Vec2 { x: 1., y: 0. },
-                                Vec2 { x: 0., y: 1. },
-                                Vec2 { x: 1., y: 1. },
+                                Vec2 { x: 1. / 64., y: 1. / 64. } + texture_offset,
+                                Vec2 { x: 1. / 16. - 1. / 64., y: 1. / 64. } + texture_offset,
+                                Vec2 { x: 1. / 64., y: 1. / 16. - 1. / 64. } + texture_offset,
+                                Vec2 { x: 1. / 16. - 1. / 64., y: 1. / 16. - 1. / 64. } + texture_offset,
                             ])
                         }
                     }

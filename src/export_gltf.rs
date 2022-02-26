@@ -69,9 +69,37 @@ pub fn save_mesh(
                             "POSITION"=>1,
 						    "TEXCOORD_0"=>2
                         },
-                        "indices"=>3
+                        "indices"=>3,
+                        "material"=>0
                     }
-                ]
+                ],
+            }
+        ],
+        "textures"=>array![
+            object!{
+                "source"=>0,
+                "sampler"=>0
+            }
+        ],
+        "images"=>array![
+            object!{
+                "uri"=>"colormap.png",
+            }
+        ],
+        "materials"=>array![
+            object!{
+                "pbrMetallicRoughness" => object!{
+                    "baseColorTexture" => object!{
+                        "index" => 0,
+                        "texCoord" => 0
+                    }
+                }
+            }
+        ],
+        "samplers"=>array![
+            object!{
+                "magFilter"=>9728,
+                "minFilter"=>9728
             }
         ],
         "accessors"=>array![
