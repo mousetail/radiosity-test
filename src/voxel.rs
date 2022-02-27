@@ -6,6 +6,11 @@ struct CubeSides {
     front: bool,
 }
 
+const IMAGE_WIDTH: i32 = 64;
+const IMAGE_MARGIN: i32 = 256;
+const FRAC_1_IMAGE_WIDTH: f32 = 1. / IMAGE_WIDTH as f32;
+const FRAC_1_IMAGE_MARGIN: f32 = 1. / IMAGE_MARGIN as f32;
+
 impl CubeSides {
     fn new() -> Self {
         CubeSides {
@@ -79,26 +84,28 @@ impl Iterator for CubeSides {
     }
 }
 
-fn is_empty_or_out_of_bounds<const SIZE: usize>(voxels: &[[[u16; SIZE]; SIZE]; SIZE], coords: (i32, i32, i32)) -> bool {
+fn is_empty_or_out_of_bounds<const SIZE: usize>(voxels: &[[[[u8; 4]; SIZE]; SIZE]; SIZE], coords: (i32, i32, i32)) -> bool {
     if coords.0 < 0 || coords.1 < 0 || coords.2 < 0 {
         return true;
     }
     if coords.0 >= SIZE as i32 || coords.1 >= SIZE as i32 || coords.2 >= SIZE as i32 {
         return true;
     }
-    return voxels[coords.0 as usize][coords.1 as usize][coords.2 as usize] == 0;
+    return voxels[coords.0 as usize][coords.1 as usize][coords.2 as usize][3] == 0;
 }
 
-pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[u16; SIZE]; SIZE]; SIZE], filename: String) -> Result<(), SaveMeshError> {
+pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE], filename: String) -> Result<(), SaveMeshError> {
     let mut positions: Vec<Vec3> = Vec::new();
     let mut normals: Vec<Vec3> = Vec::new();
     let mut texture_coordinates: Vec<Vec2> = Vec::new();
     let mut indexes: Vec<usize> = Vec::new();
 
+    let mut face_index = 0;
+
     for x in 0..SIZE {
         for y in 0..SIZE {
             for z in 0..SIZE {
-                if voxels[x][y][z] != 0 {
+                if voxels[x][y][z][3] != 0 {
                     let base_position = Vec3 {
                         x: x as f32 / SIZE as f32,
                         y: y as f32 / SIZE as f32,
@@ -117,15 +124,18 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[u16; SIZE]; SIZE]; SIZE], fil
                             indexes.extend(cube.indices.map(|x| x + length));
 
                             let texture_offset = Vec2 {
-                                x: (voxels[x][y][z] / 16) as f32 / 16.,
-                                y: (voxels[x][y][z] % 16) as f32 / 16.,
+                                x: (face_index / IMAGE_WIDTH) as f32 / IMAGE_WIDTH as f32,
+                                y: (face_index % IMAGE_WIDTH) as f32 / IMAGE_WIDTH as f32,
                             };
+
+
                             texture_coordinates.extend([
-                                Vec2 { x: 1. / 64., y: 1. / 64. } + texture_offset,
-                                Vec2 { x: 1. / 16. - 1. / 64., y: 1. / 64. } + texture_offset,
-                                Vec2 { x: 1. / 64., y: 1. / 16. - 1. / 64. } + texture_offset,
-                                Vec2 { x: 1. / 16. - 1. / 64., y: 1. / 16. - 1. / 64. } + texture_offset,
-                            ])
+                                Vec2 { x: FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_MARGIN } + texture_offset,
+                                Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH } + texture_offset,
+                                Vec2 { x: FRAC_1_IMAGE_WIDTH, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
+                                Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
+                            ]);
+                            face_index += 1;
                         }
                     }
                 }

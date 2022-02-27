@@ -17,42 +17,38 @@ fn closest_color(color: &Rgba<u8>) -> u8 {
     return min_index as u8;
 }
 
-pub fn straight_segment(layers: &[RgbaImage; 16]) -> [[[u16; 16]; 16]; 16] {
-    let mut grid = [[[0; 16]; 16]; 16];
+pub fn straight_segment(layers: &[RgbaImage; 16]) -> [[[[u8; 4]; 16]; 16]; 16] {
+    let mut grid = [[[[0; 4]; 16]; 16]; 16];
     for x in 0..16 {
         for y in 0..16 {
             for z in 0..16 {
                 let color = layers[x].get_pixel(z as u32, layers[x].height() - 1 - y as u32);
-                grid[x][y][z] = if color[3] == 0 { 0 } else {
-                    closest_color(color) as u16
-                }
+                grid[x][y][z] = color.0;
             }
         }
     };
     grid
 }
 
-fn curve_segment(layers: &[RgbaImage; 16], cmp: fn(x: usize, z: usize)->bool) -> [[[u16; 16]; 16]; 16] {
-    let mut grid = [[[0; 16]; 16]; 16];
+fn curve_segment(layers: &[RgbaImage; 16], cmp: fn(x: usize, z: usize)->bool) -> [[[[u8; 4]; 16]; 16]; 16] {
+    let mut grid = [[[[0; 4]; 16]; 16]; 16];
     for x in 0..16 {
         for y in 0..16 {
             for z in 0..16 {
                 let color = if cmp(x, z) {layers[x].get_pixel(z as u32, layers[x].height() - 1 - y as u32)} else {
                     layers[z].get_pixel(x as u32, layers[x].height() - 1 - y as u32)
                 };
-                grid[x][y][z] = if color[3] == 0 { 0 } else {
-                    closest_color(color) as u16
-                }
+                grid[x][y][z] = color.0
             }
         }
     };
     grid
 }
 
-pub fn left_curve_segment(layers: &[RgbaImage; 16]) -> [[[u16; 16]; 16]; 16] {
+pub fn left_curve_segment(layers: &[RgbaImage; 16]) -> [[[[u8; 4]; 16]; 16]; 16] {
     return curve_segment(layers, |x, z| x < z)
 }
 
-pub fn right_curve_segment(layers: &[RgbaImage; 16]) -> [[[u16; 16]; 16]; 16] {
+pub fn right_curve_segment(layers: &[RgbaImage; 16]) -> [[[[u8; 4]; 16]; 16]; 16] {
     return curve_segment(layers, |x, z| x > z)
 }
