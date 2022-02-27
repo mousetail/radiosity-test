@@ -39,6 +39,29 @@ fn main() {
         image.clone(),
         end_image
     ];
+
+    let room_image = ImageReader::open("media/room_edge.png").unwrap().decode().unwrap().into_rgba8();
+    let room_end_image = ImageReader::open("media/room_edge_end.png").unwrap().decode().unwrap().into_rgba8();
+
+    let room_layers = [
+        room_end_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_image.clone(),
+        room_end_image
+    ];
+
     voxel_to_mesh(straight_segment(&layers
     ), "hallway".to_string()).unwrap();
     voxel_to_mesh(
@@ -47,4 +70,13 @@ fn main() {
     voxel_to_mesh(
         right_curve_segment(&layers),
         "hallway_curve_right".to_string()).unwrap();
+
+    voxel_to_mesh(straight_segment(&room_layers
+    ), "room".to_string()).unwrap();
+    voxel_to_mesh(
+        left_curve_segment(&room_layers),
+        "room_curve_left".to_string()).unwrap();
+    voxel_to_mesh(
+        right_curve_segment(&room_layers),
+        "room_curve_right".to_string()).unwrap();
 }
