@@ -1,7 +1,8 @@
 use json::{JsonError, object, array};
 use std::fs::File;
-use std::io::Write;
+use std::io::{Cursor, Seek, SeekFrom, Write};
 use std::{fs, result};
+use image::{DynamicImage, ImageError, RgbaImage};
 use crate::vector::{Vec2, Vec3};
 use thiserror::{Error};
 
@@ -15,12 +16,18 @@ fn float_min<T>(it: T) -> f32 where T: Iterator<Item=f32> {
     )
 }
 
+fn pad_length(x: usize) -> usize {
+    ((x + 3) / 4) * 4
+}
+
 #[derive(Debug, Error)]
 pub enum SaveMeshError {
-    #[error("Sjon Error")]
+    #[error("Json Error")]
     JsonError(#[from] JsonError),
     #[error("IO Error")]
-    IOError(#[from] std::io::Error)
+    IOError(#[from] std::io::Error),
+    #[error("Image Error")]
+    ImageError(#[from] ImageError),
 }
 
 pub fn save_mesh(
@@ -29,6 +36,7 @@ pub fn save_mesh(
     normals: &Vec<Vec3>,
     uvs: &Vec<Vec2>,
     indices: &Vec<usize>,
+    texture: DynamicImage,
 ) -> result::Result<(), SaveMeshError> {
     let min_vertex = [
         float_min(vertexes.iter().map(|i| i.x)),
@@ -40,6 +48,9 @@ pub fn save_mesh(
         float_max(vertexes.iter().map(|i| i.y)),
         float_max(vertexes.iter().map(|i| i.z)),
     ];
+
+    let mut image_bytes: Vec<u8> = Vec::new();
+    texture.write_to(&mut Cursor::new(&mut image_bytes), image::ImageOutputFormat::Png)?;
 
 
     let gltf_json_part = object! {
@@ -83,7 +94,9 @@ pub fn save_mesh(
         ],
         "images"=>array![
             object!{
-                "uri"=>"colormap.png",
+                "bufferView"=>4,
+                "mimeType"=>"image/png",
+                "name"=>"texture0"
             }
         ],
         "materials"=>array![
@@ -151,12 +164,18 @@ pub fn save_mesh(
                 "buffer"=>0,
                 "byteOffset"=>4 * 3 * normals.len() + 4 * 3 * vertexes.len() + 4 * 2 * uvs.len(),
                 "byteLength"=>4 * indices.len(),
+            },
+            // Texture
+            object!{
+                "buffer"=>0,
+                "byteLength"=>image_bytes.len(),
+                "byteOffset"=>4 * 3 * normals.len() + 4 * 3 * vertexes.len() + 4 * 2 * uvs.len() + 4 * indices.len()
             }
         ],
         "buffers"=>array![
             object!{
-                "byteLength"=>4 * 3 * normals.len() + 4 * 3 * vertexes.len() + 4 * 2 * uvs.len() + 4 * indices.len()
-            }
+                "byteLength"=>4 * 3 * normals.len() + 4 * 3 * vertexes.len() + 4 * 2 * uvs.len() + 4 * indices.len() + image_bytes.len()
+            },
         ]
     };
 
@@ -188,13 +207,16 @@ pub fn save_mesh(
     file.write_all(&2_u32.to_le_bytes())?;
     file.write_all(
         &(
-            (data.len() +
-                buffer_normals.len() +
-                buffer_positions.len() +
-                buffer_uvs.len() +
-                buffer_indices.len() +
-                16 + // Chunk headers
-                12 // Top header
+            (
+                pad_length(data.len() +
+                    buffer_normals.len() +
+                    buffer_positions.len() +
+                    buffer_uvs.len() +
+                    buffer_indices.len() +
+                    image_bytes.len()
+                ) +
+                    16 + // Chunk headers
+                    12 // Top header
             ) as u32
         ).to_le_bytes()
     )?;
@@ -203,12 +225,28 @@ pub fn save_mesh(
     file.write_all("JSON".as_bytes())?;
     file.write(data.as_bytes())?;
 
-    file.write_all(&((buffer_positions.len() + buffer_normals.len() + buffer_uvs.len() + buffer_indices.len()) as u32).to_le_bytes())?;
+    file.write_all(&(pad_length(
+        buffer_positions.len() + buffer_normals.len() + buffer_uvs.len() + buffer_indices.len() + image_bytes.len()) as u32
+    ).to_le_bytes())?;
     file.write_all("BIN".as_bytes())?;
     file.write(&[0])?;
     file.write_all(buffer_normals.as_slice())?;
     file.write_all(buffer_positions.as_slice())?;
     file.write_all(buffer_uvs.as_slice())?;
     file.write_all(buffer_indices.as_slice())?;
+    //let cursor_position = file.seek(SeekFrom::Current(0))?;
+    //for i in 0..((4 - cursor_position % 4) % 4) {
+    //    file.write(&[0]);
+    //}
+
+    //file.write_all(&(pad_length(image_bytes.len()) as u32).to_le_bytes())?;
+    //file.write_all("BIN".as_bytes())?;
+    //file.write(&[0])?;
+    file.write_all(image_bytes.as_slice())?;
+
+    let cursor_position = file.seek(SeekFrom::Current(0))?;
+    for i in 0..((4 - cursor_position % 4) % 4) {
+        file.write(&[0])?;
+    }
     return result::Result::Ok(());
 }

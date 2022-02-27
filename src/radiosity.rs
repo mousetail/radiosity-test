@@ -3,10 +3,10 @@ use crate::vector::{AXISES, Vec2, Vec3};
 
 #[derive(Copy, Clone)]
 pub struct Face {
-    corners: [Vec3; 4],
-    texture_position: [Vec2; 4],
-    normal: Vec3,
-    brightness: f32,
+    pub corners: [Vec3; 4],
+    pub(crate) texture_position: [Vec2; 4],
+    pub normal: Vec3,
+    pub brightness: f32,
 }
 
 impl Face {
@@ -79,11 +79,12 @@ fn test_intersection(p1: Vec3, p2: Vec3, face: &Face) -> bool {
     return (near > 0. && near < 1.) || (far > 0. && far < 1.);
 }
 
-fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
+pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
     let occluder_faces = faces.clone();
     let mut texture: RgbaImage = RgbaImage::new(64, 64);
     //let mut faces1 = faces.clone();
     for i in 0..iterations {
+        println!("Radiosity iteration {}", i);
         let faces2 = faces.clone();
         for face in faces.iter_mut() {
             for face2 in &faces2 {
@@ -97,19 +98,24 @@ fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
                         break;
                     }
 
-                    face.brightness += face2.brightness * (1. / face.distance_squared(&face2));
+                    if !intersects {
+                        face.brightness += face2.brightness * (1. / face.distance_squared(&face2));
+                    }
                 }
             }
         }
     }
 
     for (index, face) in faces.iter().enumerate() {
+        println!("setting pixel {} {} to value {}", index as u32 / 64,
+                 index as u32 % 64,
+                 face.brightness);
         texture.put_pixel(
             index as u32 / 64,
             index as u32 % 64,
-            [face.brightness, face.brightness * 2, face.brightness * 4, 255].into(),
+            [face.brightness as u8, (face.brightness * 2.) as u8, (face.brightness * 255.) as u8, 255].into(),
         )
     }
 
-    return texture
+    return texture;
 }

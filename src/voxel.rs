@@ -1,4 +1,6 @@
+use image::DynamicImage;
 use crate::export_gltf::{save_mesh, SaveMeshError};
+use crate::radiosity::{Face, simulate_radiosity};
 use crate::vector::{Vec2, Vec3};
 
 struct CubeSides {
@@ -54,6 +56,12 @@ impl CubeSides {
             normals: [normal.0; 4],
             indices,
             offset,
+            face: Face {
+                corners: positions,
+                texture_position: [Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, ],
+                normal: normal.0,
+                brightness: 1.0,
+            },
         }
     }
 }
@@ -63,6 +71,7 @@ struct CubeSide {
     pub normals: [Vec3; 4],
     pub indices: [usize; 6],
     pub offset: (i8, i8, i8),
+    pub face: Face,
 }
 
 impl Iterator for CubeSides {
@@ -99,6 +108,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
     let mut normals: Vec<Vec3> = Vec::new();
     let mut texture_coordinates: Vec<Vec2> = Vec::new();
     let mut indexes: Vec<usize> = Vec::new();
+    let mut faces: Vec<Face> = Vec::new();
 
     let mut face_index = 0;
 
@@ -127,15 +137,19 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
                                 x: (face_index / IMAGE_WIDTH) as f32 / IMAGE_WIDTH as f32,
                                 y: (face_index % IMAGE_WIDTH) as f32 / IMAGE_WIDTH as f32,
                             };
-
-
-                            texture_coordinates.extend([
+                            let face_coordinates = [
                                 Vec2 { x: FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_MARGIN } + texture_offset,
                                 Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH } + texture_offset,
                                 Vec2 { x: FRAC_1_IMAGE_WIDTH, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
                                 Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
-                            ]);
+                            ];
+
+                            texture_coordinates.extend(face_coordinates.clone());
                             face_index += 1;
+
+                            let mut face = cube.face;
+                            face.texture_position = face_coordinates;
+                            faces.push(face);
                         }
                     }
                 }
@@ -143,11 +157,14 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
         }
     }
 
+    let texture = simulate_radiosity(&mut faces, 4);
+
     save_mesh(
         filename,
         &positions,
         &normals,
         &texture_coordinates,
         &indexes,
+        DynamicImage::ImageRgba8(texture)
     )
 }
