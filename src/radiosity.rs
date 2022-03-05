@@ -8,6 +8,7 @@ pub struct Face {
     pub(crate) texture_position: [Vec2; 4],
     pub normal: Vec3,
     pub brightness: [f32; 3],
+    pub last_iteration_brightness: [f32; 3],
     pub(crate) id: u32,
     pub(crate) color: Rgba<u8>,
 }
@@ -83,13 +84,24 @@ fn test_intersection(p1: Vec3, p2: Vec3, face: &Face) -> bool {
 }
 
 pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
-    let occluder_faces = faces.clone();
+    //let occluder_faces = faces.clone();
     let mut texture: RgbaImage = RgbaImage::new(64, 64);
     let size = faces.len();
+
+    for face in faces.iter_mut() {
+        face.last_iteration_brightness = face.brightness;
+    }
     //let mut faces1 = faces.clone();
     for i in 0..iterations {
         println!("Radiosity iteration {}, Faces: {}", i, size);
         let faces2 = faces.clone();
+        for face in faces.iter_mut() {
+            for i in 0..3 {
+                face.brightness[i] += face.last_iteration_brightness[i]
+            }
+            face.last_iteration_brightness = [0.;3];
+        }
+
         for (face_index, face) in faces.iter_mut().enumerate() {
             for face2 in &faces2 {
                 if face.id == face2.id {
@@ -114,17 +126,19 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
                 let factor = (difference.dot(&face.normal)).max(0.) * (-difference.dot(&face2.normal)).max(0.);
                 //if !intersects {
                 for i in 0..3 {
-                    face.brightness[i] += (face.color[i] as f32 / 256.)
-                        * face2.brightness[i]
+                    face.last_iteration_brightness[i] += (face.color[i] as f32 / 256.)
+                        * face2.last_iteration_brightness[i]
                         * (1. / face.distance_squared(&face2)) / 16. / 16.
                         * factor;
                 }
                 //}
             }
+        }
+    }
 
-            if face_index % 20 == 0 {
-                print!("| {:?}", face.brightness);
-            }
+    for face in faces.iter_mut() {
+        for i in 0..3 {
+            face.brightness[i] += face.last_iteration_brightness[i]
         }
     }
 

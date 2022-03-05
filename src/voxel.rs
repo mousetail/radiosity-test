@@ -71,6 +71,7 @@ impl CubeSides {
                 normal: final_normal,
                 brightness: [1.0; 3],
                 id: 0,
+                last_iteration_brightness: [0.0; 3],
                 color: [0, 0, 0, 255].into(),
             },
         }

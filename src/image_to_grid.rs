@@ -29,7 +29,7 @@ fn curve_segment(layers: &[RgbaImage; 16], cmp: fn(x: usize, z: usize)->bool) ->
                     layers[z].get_pixel(x as u32, layers[x].height() - 1 - y as u32)
                 };
                 grid[x][y][z].color = *color;
-                grid[x][y][z].emission = if color[0] == 255 { 1. } else {0. };
+                grid[x][y][z].emission = if color.0 == [255, 255, 255, 255] { 1. } else {0. };
             }
         }
     };
