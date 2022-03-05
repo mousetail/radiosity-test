@@ -151,8 +151,8 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[RadiosityColor; SIZE]; SIZE];
                             };
                             let face_coordinates = [
                                 Vec2 { x: FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_MARGIN } + texture_offset,
-                                Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH } + texture_offset,
-                                Vec2 { x: FRAC_1_IMAGE_WIDTH, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
+                                Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_MARGIN } + texture_offset,
+                                Vec2 { x: FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
                                 Vec2 { x: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN, y: FRAC_1_IMAGE_WIDTH - FRAC_1_IMAGE_MARGIN } + texture_offset,
                             ];
 
@@ -175,7 +175,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[RadiosityColor; SIZE]; SIZE];
         }
     }
 
-    let texture = simulate_radiosity(&mut faces, 4);
+    let texture = radiosity_subdivide(&mut faces, 4, 1);
 
     save_mesh(
         filename,

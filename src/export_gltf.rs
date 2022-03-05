@@ -248,5 +248,8 @@ pub fn save_mesh(
     for i in 0..((4 - cursor_position % 4) % 4) {
         file.write(&[0])?;
     }
+
+    let mut img_file = File::create(format!("cache/{}.png", filename))?;
+    img_file.write_all(image_bytes.as_slice())?;
     return result::Result::Ok(());
 }

@@ -2,7 +2,7 @@ use image::{Pixel, Rgb, Rgba, RgbaImage};
 use crate::radiosity_color::RadiosityColor;
 use crate::vector::{AXISES, Vec2, Vec3};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Face {
     pub corners: [Vec3; 4],
     pub(crate) texture_position: [Vec2; 4],
@@ -130,6 +130,8 @@ pub fn radiosity_subdivide(faces: &mut Vec<Face>, iterations: u8, subdivisions: 
 }
 
 pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
+    println!("Face original: {:?}", faces[0]);
+    println!("Face: {:?}", faces[0].subdivide());
     //let occluder_faces = faces.clone();
     let mut texture: RgbaImage = RgbaImage::new(128, 128);
     let size = faces.len();
@@ -167,14 +169,14 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
                 //         break;
                 //     }
                 // }
-                assert!(face.distance_squared(&face2) >= 1. / 1024., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
+                assert!(face.distance_squared(&face2) >= 1. / 4096., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
 
                 let factor = (difference.dot(&face.normal)).max(0.) * (-difference.dot(&face2.normal)).max(0.);
                 //if !intersects {
                 for i in 0..3 {
                     face.last_iteration_brightness[i] += (face.color[i] as f32 / 256.)
                         * face2.last_iteration_brightness[i]
-                        * (1. / face.distance_squared(&face2)) / 16. / 16.
+                        * (1. / face.distance_squared(&face2)) / 32. / 32.
                         * factor;
                 }
                 //}
@@ -196,8 +198,8 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
         let mut color = Rgb::to_rgba(&brightness.map(|x| (x * 256.) as u8).into());
         color[3] = 255;
         texture.put_pixel(
-            (face.texture_position[0].x * texture.width() as f32) as u32,
-            (face.texture_position[0].y * texture.height() as f32) as u32,
+            ((face.texture_position[0].x + face.texture_position[3].x) * 0.5 * texture.width() as f32) as u32,
+            ((face.texture_position[0].y + face.texture_position[3].y) * 0.5 * texture.height() as f32) as u32,
             color,
         )
     }
