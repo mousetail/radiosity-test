@@ -8,6 +8,7 @@ mod vector;
 mod voxel;
 mod image_to_grid;
 mod radiosity;
+mod radiosity_color;
 
 fn main() {
     let mut texture = RgbImage::new(16, 16);

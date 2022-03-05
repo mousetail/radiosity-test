@@ -37,6 +37,15 @@ impl Vec3 {
     pub fn dot(&self, other: &Self) -> f32 {
         return self.x * other.x + self.y * other.y + self.z * other.z;
     }
+
+    pub fn normalize(&self) -> Self {
+        let distance = self.distance_squared(&Vec3{x: 0., y: 0., z:0.}).sqrt();
+        return Vec3 {
+            x: self.x / distance,
+            y: self.y / distance,
+            z: self.z / distance
+        }
+    }
 }
 
 impl Add for Vec3 {

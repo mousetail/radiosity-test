@@ -1,4 +1,5 @@
-use image::{Rgba, RgbaImage};
+use image::{Pixel, Rgb, Rgba, RgbaImage};
+use crate::radiosity_color::RadiosityColor;
 use crate::vector::{AXISES, Vec2, Vec3};
 
 #[derive(Copy, Clone)]
@@ -6,8 +7,9 @@ pub struct Face {
     pub corners: [Vec3; 4],
     pub(crate) texture_position: [Vec2; 4],
     pub normal: Vec3,
-    pub brightness: f32,
+    pub brightness: [f32; 3],
     pub(crate) id: u32,
+    pub(crate) color: Rgba<u8>,
 }
 
 impl Face {
@@ -89,13 +91,13 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
         println!("Radiosity iteration {}, Faces: {}", i, size);
         let faces2 = faces.clone();
         for (face_index, face) in faces.iter_mut().enumerate() {
-
             for face2 in &faces2 {
                 if face.id == face2.id {
                     continue;
                 }
-                // let position1 = face.center();
-                // let position2 = face2.center();
+                let position1 = face.center();
+                let position2 = face2.center();
+                let difference = (position1 - position2).normalize();
 
                 // let mut intersects = false;
                 // for face3 in &occluder_faces {
@@ -107,28 +109,36 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
                 //         break;
                 //     }
                 // }
-                assert!(face.distance_squared(&face2) >= 1./1024., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
+                assert!(face.distance_squared(&face2) >= 1. / 1024., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
 
+                let factor = (difference.dot(&face.normal)).max(0.) * (-difference.dot(&face2.normal)).max(0.);
                 //if !intersects {
-                face.brightness += face2.brightness * (1. / face.distance_squared(&face2)) / 64. / 64. * face.normal.dot(&face2.normal).max(1.);
+                for i in 0..3 {
+                    face.brightness[i] += (face.color[i] as f32 / 256.)
+                        * face2.brightness[i]
+                        * (1. / face.distance_squared(&face2)) / 16. / 16.
+                        * factor;
+                }
                 //}
             }
 
             if face_index % 20 == 0 {
-                print!("| {}", face.brightness);
+                print!("| {:?}", face.brightness);
             }
         }
     }
 
     for (index, face) in faces.iter().enumerate() {
         let brightness = face.brightness;
-        println!("setting pixel {} {} to value {}", index as u32 / 64,
-                 index as u32 % 64,
-                 brightness);
+        // println!("setting pixel {} {} to value {}", index as u32 / 64,
+        //          index as u32 % 64,
+        //          brightness);
+        let mut color = Rgb::to_rgba(&brightness.map(|x| (x * 256.) as u8).into());
+        color[3] = 255;
         texture.put_pixel(
             index as u32 / 64,
             index as u32 % 64,
-            [(brightness * 8.) as u8, (brightness * 16.) as u8, (brightness * 32.) as u8, 255].into(),
+            color,
         )
     }
 

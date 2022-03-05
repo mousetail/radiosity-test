@@ -1,8 +1,9 @@
-use image::DynamicImage;
+use image::{DynamicImage, Pixel};
 use crate::export_gltf::{save_mesh, SaveMeshError};
 use crate::radiosity::{Face, simulate_radiosity};
 use crate::vector::{Vec2, Vec3};
 use std::default::Default;
+use crate::radiosity_color::RadiosityColor;
 
 struct CubeSides {
     edge: u8,
@@ -23,7 +24,7 @@ impl CubeSides {
     }
 
     fn get_item(&self) -> CubeSide {
-        let normal: (Vec3, Vec3, Vec3) = match self.edge {
+        let mut normal: (Vec3, Vec3, Vec3) = match self.edge {
             0 => (Vec3 { x: 1., y: 0., z: 0. }, Vec3 { x: 0., y: 1., z: 0. }, Vec3 { x: 0., y: 0., z: 1. }),
             1 => (Vec3 { x: 0., y: 1., z: 0. }, Vec3 { x: 0., y: 0., z: 1. }, Vec3 { x: 1., y: 0., z: 0. }),
             2 => (Vec3 { x: 0., y: 0., z: 1. }, Vec3 { x: 1., y: 0., z: 0. }, Vec3 { x: 0., y: 1., z: 0. }),
@@ -37,10 +38,17 @@ impl CubeSides {
             normal.1 + normal.2
         ];
 
+        let final_normal: Vec3;
         if self.front {
             for i in 0..positions.len() {
-                positions[i] += normal.0
+                positions[i] += normal.0;
             }
+
+            final_normal = (
+                normal.0 * -1.
+            );
+        } else {
+            final_normal = normal.0
         }
 
         let indices = if self.front {
@@ -54,15 +62,16 @@ impl CubeSides {
 
         CubeSide {
             vertices: positions,
-            normals: [normal.0; 4],
+            normals: [final_normal; 4],
             indices,
             offset,
             face: Face {
                 corners: positions,
                 texture_position: [Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, ],
-                normal: normal.0,
-                brightness: 1.0,
-                id: 0
+                normal: final_normal,
+                brightness: [1.0; 3],
+                id: 0,
+                color: [0, 0, 0, 255].into(),
             },
         }
     }
@@ -95,17 +104,17 @@ impl Iterator for CubeSides {
     }
 }
 
-fn is_empty_or_out_of_bounds<const SIZE: usize>(voxels: &[[[[u8; 4]; SIZE]; SIZE]; SIZE], coords: (i32, i32, i32)) -> bool {
+fn is_empty_or_out_of_bounds<const SIZE: usize>(voxels: &[[[RadiosityColor; SIZE]; SIZE]; SIZE], coords: (i32, i32, i32)) -> bool {
     if coords.0 < 0 || coords.1 < 0 || coords.2 < 0 {
         return true;
     }
     if coords.0 >= SIZE as i32 || coords.1 >= SIZE as i32 || coords.2 >= SIZE as i32 {
         return true;
     }
-    return voxels[coords.0 as usize][coords.1 as usize][coords.2 as usize][3] == 0;
+    return voxels[coords.0 as usize][coords.1 as usize][coords.2 as usize].color[3] == 0;
 }
 
-pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE], filename: String) -> Result<(), SaveMeshError> {
+pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[RadiosityColor; SIZE]; SIZE]; SIZE], filename: String) -> Result<(), SaveMeshError> {
     let mut positions: Vec<Vec3> = Vec::new();
     let mut normals: Vec<Vec3> = Vec::new();
     let mut texture_coordinates: Vec<Vec2> = Vec::new();
@@ -117,7 +126,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
     for x in 0..SIZE {
         for y in 0..SIZE {
             for z in 0..SIZE {
-                if voxels[x][y][z][3] != 0 {
+                if voxels[x][y][z].color[3] != 0 {
                     let base_position = Vec3 {
                         x: x as f32 / SIZE as f32,
                         y: y as f32 / SIZE as f32,
@@ -154,6 +163,8 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
                             face.corners = face.corners.map(
                                 |x| x * (1.0 / SIZE as f32) + base_position);
                             face.id = faces.len() as u32;
+                            face.brightness = voxels[x][y][z].color.to_rgb().0.map(|i| (i as f32) / 256. * voxels[x][y][z].emission);
+                            face.color = voxels[x][y][z].color;
                             faces.push(face);
                         }
                     }
@@ -162,7 +173,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
         }
     }
 
-    let texture = simulate_radiosity(&mut faces, 1);
+    let texture = simulate_radiosity(&mut faces, 4);
 
     save_mesh(
         filename,
@@ -170,6 +181,6 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
         &normals,
         &texture_coordinates,
         &indexes,
-        DynamicImage::ImageRgba8(texture)
+        DynamicImage::ImageRgba8(texture),
     )
 }
