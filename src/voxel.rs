@@ -61,6 +61,7 @@ impl CubeSides {
                 texture_position: [Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, Vec2 { x: 0., y: 0. }, ],
                 normal: normal.0,
                 brightness: 1.0,
+                id: 0
             },
         }
     }
@@ -149,6 +150,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
 
                             let mut face = cube.face;
                             face.texture_position = face_coordinates;
+                            face.id = faces.len() as u32;
                             faces.push(face);
                         }
                     }
@@ -157,7 +159,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
         }
     }
 
-    let texture = simulate_radiosity(&mut faces, 4);
+    let texture = simulate_radiosity(&mut faces, 1);
 
     save_mesh(
         filename,

@@ -7,6 +7,7 @@ pub struct Face {
     pub(crate) texture_position: [Vec2; 4],
     pub normal: Vec3,
     pub brightness: f32,
+    pub(crate) id: u32,
 }
 
 impl Face {
@@ -82,38 +83,50 @@ fn test_intersection(p1: Vec3, p2: Vec3, face: &Face) -> bool {
 pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
     let occluder_faces = faces.clone();
     let mut texture: RgbaImage = RgbaImage::new(64, 64);
+    let size = faces.len();
     //let mut faces1 = faces.clone();
     for i in 0..iterations {
-        println!("Radiosity iteration {}", i);
+        println!("Radiosity iteration {}, Faces: {}", i, size);
         let faces2 = faces.clone();
-        for face in faces.iter_mut() {
+        for (face_index, face) in faces.iter_mut().enumerate() {
+            if face_index % 20 == 0 {
+                println!("| {}", faces2[0].brightness);
+            }
+
             for face2 in &faces2 {
+                if face.id == face2.id {
+                    continue;
+                }
                 let position1 = face.center();
                 let position2 = face2.center();
 
                 let mut intersects = false;
                 for face3 in &occluder_faces {
+                    if face.id == face3.id || face2.id == face3.id {
+                        continue;
+                    }
                     if test_intersection(position1, position2, face3) {
                         intersects = true;
                         break;
                     }
+                }
 
-                    if !intersects {
-                        face.brightness += face2.brightness * (1. / face.distance_squared(&face2));
-                    }
+                if !intersects {
+                    face.brightness += face2.brightness * (1. / face.distance_squared(&face2)) / 64. / 64.;
                 }
             }
         }
     }
 
     for (index, face) in faces.iter().enumerate() {
+        let brightness = face.brightness;
         println!("setting pixel {} {} to value {}", index as u32 / 64,
                  index as u32 % 64,
-                 face.brightness);
+                 brightness);
         texture.put_pixel(
             index as u32 / 64,
             index as u32 % 64,
-            [face.brightness as u8, (face.brightness * 2.) as u8, (face.brightness * 255.) as u8, 255].into(),
+            [brightness as u8, (brightness * 2.) as u8, (brightness * 4.) as u8, 255].into(),
         )
     }
 
