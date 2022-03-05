@@ -89,31 +89,33 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
         println!("Radiosity iteration {}, Faces: {}", i, size);
         let faces2 = faces.clone();
         for (face_index, face) in faces.iter_mut().enumerate() {
-            if face_index % 20 == 0 {
-                println!("| {}", faces2[0].brightness);
-            }
 
             for face2 in &faces2 {
                 if face.id == face2.id {
                     continue;
                 }
-                let position1 = face.center();
-                let position2 = face2.center();
+                // let position1 = face.center();
+                // let position2 = face2.center();
 
-                let mut intersects = false;
-                for face3 in &occluder_faces {
-                    if face.id == face3.id || face2.id == face3.id {
-                        continue;
-                    }
-                    if test_intersection(position1, position2, face3) {
-                        intersects = true;
-                        break;
-                    }
-                }
+                // let mut intersects = false;
+                // for face3 in &occluder_faces {
+                //     if face.id == face3.id || face2.id == face3.id {
+                //         continue;
+                //     }
+                //     if test_intersection(position1, position2, face3) {
+                //         intersects = true;
+                //         break;
+                //     }
+                // }
+                assert!(face.distance_squared(&face2) >= 1./1024., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
 
-                if !intersects {
-                    face.brightness += face2.brightness * (1. / face.distance_squared(&face2)) / 64. / 64.;
-                }
+                //if !intersects {
+                face.brightness += face2.brightness * (1. / face.distance_squared(&face2)) / 64. / 64. * face.normal.dot(&face2.normal).max(1.);
+                //}
+            }
+
+            if face_index % 20 == 0 {
+                print!("| {}", face.brightness);
             }
         }
     }
@@ -126,7 +128,7 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
         texture.put_pixel(
             index as u32 / 64,
             index as u32 % 64,
-            [brightness as u8, (brightness * 2.) as u8, (brightness * 4.) as u8, 255].into(),
+            [(brightness * 8.) as u8, (brightness * 16.) as u8, (brightness * 32.) as u8, 255].into(),
         )
     }
 

@@ -33,6 +33,10 @@ impl Vec3 {
         let diff = self - other;
         return diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
     }
+
+    pub fn dot(&self, other: &Self) -> f32 {
+        return self.x * other.x + self.y * other.y + self.z * other.z;
+    }
 }
 
 impl Add for Vec3 {

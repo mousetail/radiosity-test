@@ -2,6 +2,7 @@ use image::DynamicImage;
 use crate::export_gltf::{save_mesh, SaveMeshError};
 use crate::radiosity::{Face, simulate_radiosity};
 use crate::vector::{Vec2, Vec3};
+use std::default::Default;
 
 struct CubeSides {
     edge: u8,
@@ -150,6 +151,8 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[[u8; 4]; SIZE]; SIZE]; SIZE],
 
                             let mut face = cube.face;
                             face.texture_position = face_coordinates;
+                            face.corners = face.corners.map(
+                                |x| x * (1.0 / SIZE as f32) + base_position);
                             face.id = faces.len() as u32;
                             faces.push(face);
                         }
