@@ -120,3 +120,25 @@ impl Add for Vec2 {
         }
     }
 }
+
+impl Mul for Vec2 {
+    type Output = Vec2;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Vec2 {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
+impl Mul<f32> for Vec2 {
+    type Output = Vec2;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Vec2 {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}

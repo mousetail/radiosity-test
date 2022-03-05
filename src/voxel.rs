@@ -1,6 +1,6 @@
 use image::{DynamicImage, Pixel};
 use crate::export_gltf::{save_mesh, SaveMeshError};
-use crate::radiosity::{Face, simulate_radiosity};
+use crate::radiosity::{Face, radiosity_subdivide, simulate_radiosity};
 use crate::vector::{Vec2, Vec3};
 use std::default::Default;
 use crate::radiosity_color::RadiosityColor;
@@ -164,6 +164,7 @@ pub fn voxel_to_mesh<const SIZE: usize>(voxels: [[[RadiosityColor; SIZE]; SIZE];
                             face.corners = face.corners.map(
                                 |x| x * (1.0 / SIZE as f32) + base_position);
                             face.id = faces.len() as u32;
+                            face.texture_position = face_coordinates;
                             face.brightness = voxels[x][y][z].color.to_rgb().0.map(|i| (i as f32) / 256. * voxels[x][y][z].emission);
                             face.color = voxels[x][y][z].color;
                             faces.push(face);

@@ -1,4 +1,4 @@
-use image::{Rgb, Rgba, RgbImage};
+use image::{Rgb, RgbImage};
 use crate::voxel::voxel_to_mesh;
 use image::io::Reader as ImageReader;
 use crate::image_to_grid::{COLORS, left_curve_segment, right_curve_segment, straight_segment};

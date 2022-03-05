@@ -13,8 +13,49 @@ pub struct Face {
     pub(crate) color: Rgba<u8>,
 }
 
+fn get_subdivisions() -> [[(usize, usize); 4]; 4] {
+    return [
+        [
+            (0, 0),
+            (0, 1),
+            (0, 2),
+            (0, 3)
+        ],
+        [
+            (0, 1),
+            (1, 1),
+            (0, 3),
+            (1, 3)
+        ],
+        [
+            (0, 2),
+            (0, 3),
+            (2, 2),
+            (2, 3)
+        ],
+        [
+            (0, 3),
+            (1, 3),
+            (2, 3),
+            (3, 3)
+        ]
+    ];
+}
+
 impl Face {
-    fn subdivide(&self) {}
+    fn subdivide(&self) -> [Self; 4] {
+        get_subdivisions().map(
+            |subdiv| Face {
+                corners: subdiv.map(|indexes| (self.corners[indexes.0] + self.corners[indexes.1]) * 0.5),
+                texture_position: subdiv.map(|indexes| (self.texture_position[indexes.0] + self.texture_position[indexes.1]) * 0.5),
+                normal: self.normal,
+                brightness: self.brightness,
+                last_iteration_brightness: self.last_iteration_brightness,
+                id: self.id,
+                color: self.color,
+            }
+        )
+    }
 
     fn center(&self) -> Vec3 {
         return Vec3 {
@@ -83,9 +124,14 @@ fn test_intersection(p1: Vec3, p2: Vec3, face: &Face) -> bool {
     return (near > 0. && near < 1.) || (far > 0. && far < 1.);
 }
 
+pub fn radiosity_subdivide(faces: &mut Vec<Face>, iterations: u8, subdivisions: u8) -> RgbaImage {
+    let mut faces2 = faces.iter().map(|x| x.subdivide()).flatten().collect();
+    simulate_radiosity(&mut faces2, iterations)
+}
+
 pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
     //let occluder_faces = faces.clone();
-    let mut texture: RgbaImage = RgbaImage::new(64, 64);
+    let mut texture: RgbaImage = RgbaImage::new(128, 128);
     let size = faces.len();
 
     for face in faces.iter_mut() {
@@ -99,7 +145,7 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
             for i in 0..3 {
                 face.brightness[i] += face.last_iteration_brightness[i]
             }
-            face.last_iteration_brightness = [0.;3];
+            face.last_iteration_brightness = [0.; 3];
         }
 
         for (face_index, face) in faces.iter_mut().enumerate() {
@@ -150,8 +196,8 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
         let mut color = Rgb::to_rgba(&brightness.map(|x| (x * 256.) as u8).into());
         color[3] = 255;
         texture.put_pixel(
-            index as u32 / 64,
-            index as u32 % 64,
+            (face.texture_position[0].x * texture.width() as f32) as u32,
+            (face.texture_position[0].y * texture.height() as f32) as u32,
             color,
         )
     }
