@@ -20,7 +20,7 @@ fn closest_color(color: &Rgba<u8>) -> u8 {
 
 
 
-fn curve_segment(layers: &[RgbaImage; 16], cmp: fn(x: usize, z: usize)->bool) -> [[[RadiosityColor; 16]; 16]; 16] {
+fn curve_segment(layers: &[RgbaImage; 16], cmp: fn(x: usize, z: usize)->bool, brightness: f32) -> [[[RadiosityColor; 16]; 16]; 16] {
     let mut grid = [[[RadiosityColor {color: [0, 0, 0, 255].into(), emission: 0.}; 16]; 16]; 16];
     for x in 0..16 {
         for y in 0..16 {
@@ -29,21 +29,21 @@ fn curve_segment(layers: &[RgbaImage; 16], cmp: fn(x: usize, z: usize)->bool) ->
                     layers[z].get_pixel(x as u32, layers[x].height() - 1 - y as u32)
                 };
                 grid[x][y][z].color = *color;
-                grid[x][y][z].emission = if color.0 == [255, 255, 255, 255] { 1. } else {0. };
+                grid[x][y][z].emission = if color.0 == [255, 255, 255, 255] { brightness } else {0. };
             }
         }
     };
     grid
 }
 
-pub fn straight_segment(layers: &[RgbaImage; 16]) -> [[[RadiosityColor; 16]; 16]; 16] {
-    return curve_segment(layers, |x, z| true)
+pub fn straight_segment(layers: &[RgbaImage; 16], brightness: f32) -> [[[RadiosityColor; 16]; 16]; 16] {
+    return curve_segment(layers, |x, z| true, brightness)
 }
 
-pub fn left_curve_segment(layers: &[RgbaImage; 16]) -> [[[RadiosityColor; 16]; 16]; 16] {
-    return curve_segment(layers, |x, z| x < z)
+pub fn left_curve_segment(layers: &[RgbaImage; 16], brightness: f32) -> [[[RadiosityColor; 16]; 16]; 16] {
+    return curve_segment(layers, |x, z| x < z, brightness)
 }
 
-pub fn right_curve_segment(layers: &[RgbaImage; 16]) -> [[[RadiosityColor; 16]; 16]; 16] {
-    return curve_segment(layers, |x, z| x > z)
+pub fn right_curve_segment(layers: &[RgbaImage; 16], brightness: f32) -> [[[RadiosityColor; 16]; 16]; 16] {
+    return curve_segment(layers, |x, z| x > z, brightness)
 }

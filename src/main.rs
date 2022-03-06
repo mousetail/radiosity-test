@@ -64,21 +64,24 @@ fn main() {
         room_end_image
     ];
 
-    voxel_to_mesh(straight_segment(&layers
+    let hallway_brightness = 0.8;
+    let room_brightness = 2.0;
+
+    voxel_to_mesh(straight_segment(&layers, hallway_brightness
     ), "hallway".to_string()).unwrap();
     voxel_to_mesh(
-        left_curve_segment(&layers),
+        left_curve_segment(&layers, hallway_brightness),
         "hallway_curve_left".to_string()).unwrap();
     voxel_to_mesh(
-        right_curve_segment(&layers),
+        right_curve_segment(&layers, hallway_brightness),
         "hallway_curve_right".to_string()).unwrap();
 
-    voxel_to_mesh(straight_segment(&room_layers
+    voxel_to_mesh(straight_segment(&room_layers, room_brightness
     ), "room".to_string()).unwrap();
     voxel_to_mesh(
-        left_curve_segment(&room_layers),
+        left_curve_segment(&room_layers, room_brightness),
         "room_curve_left".to_string()).unwrap();
     voxel_to_mesh(
-        right_curve_segment(&room_layers),
+        right_curve_segment(&room_layers, room_brightness),
         "room_curve_right".to_string()).unwrap();
 }
