@@ -1,6 +1,6 @@
 use image::{Pixel, Rgb, Rgba, RgbaImage};
 use crate::radiosity_color::RadiosityColor;
-use crate::vector::{AXISES, Vec2, Vec3};
+use crate::vector::{Axis, AXISES, Vec2, Vec3};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Face {
@@ -42,6 +42,45 @@ fn get_subdivisions() -> [[(usize, usize); 4]; 4] {
     ];
 }
 
+struct FaceRefections {
+    iteration: u8,
+    face: Face
+}
+
+impl FaceRefections {
+    fn new(face: Face) -> FaceRefections {
+        FaceRefections {
+            face,
+            iteration: 0
+        }
+    }
+}
+
+impl Iterator for FaceRefections {
+    type Item = Face;
+
+    fn next(&mut self) -> Option<Self::Item> {
+
+        let mut face2 = self.face;
+        if (self.iteration & 4) != 0 {
+            return Option::None
+        }
+
+        // if (self.iteration & 4) != 0 {
+        //     face2 = face2.reflect(Axis::Z);
+        // }
+        if (self.iteration & 2) != 0 {
+            face2 = face2.reflect(Axis::X);
+        }
+        if (self.iteration & 1) != 0 {
+            face2 = face2.reflect(Axis::Z);
+        }
+        self.iteration += 1;
+
+        return Some(face2)
+    }
+}
+
 impl Face {
     fn subdivide(&self) -> [Self; 4] {
         get_subdivisions().map(
@@ -81,6 +120,18 @@ impl Face {
         let c1 = self.center();
         let c2 = other.center();
         return c1.distance_squared(&c2);
+    }
+
+    fn reflect(&self, axis: Axis) -> Face {
+        Face {
+            corners: self.corners.map(|x| x.reflect(axis)),
+            texture_position: self.texture_position,
+            normal: self.normal.reflect(axis),
+            brightness: self.brightness,
+            last_iteration_brightness: self.last_iteration_brightness,
+            id: self.id,
+            color: self.color
+        }
     }
 }
 
@@ -151,33 +202,38 @@ pub fn simulate_radiosity(faces: &mut Vec<Face>, iterations: u8) -> RgbaImage {
         }
 
         for (face_index, face) in faces.iter_mut().enumerate() {
-            for face2 in &faces2 {
-                if face.id == face2.id {
+            for face2_base in &faces2 {
+                if face.id == face2_base.id {
                     continue;
                 }
-                let position1 = face.center();
-                let position2 = face2.center();
-                let difference = (position1 - position2).normalize();
+                if face2_base.last_iteration_brightness == [0., 0., 0.] {
+                    continue;
+                }
+                for face2 in FaceRefections::new(*face2_base) {
+                    let position1 = face.center();
+                    let position2 = face2.center();
+                    let difference = (position1 - position2).normalize();
 
-                // let mut intersects = false;
-                // for face3 in &occluder_faces {
-                //     if face.id == face3.id || face2.id == face3.id {
-                //         continue;
-                //     }
-                //     if test_intersection(position1, position2, face3) {
-                //         intersects = true;
-                //         break;
-                //     }
-                // }
-                assert!(face.distance_squared(&face2) >= 1. / 4096., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
+                    // let mut intersects = false;
+                    // for face3 in &occluder_faces {
+                    //     if face.id == face3.id || face2.id == face3.id {
+                    //         continue;
+                    //     }
+                    //     if test_intersection(position1, position2, face3) {
+                    //         intersects = true;
+                    //         break;
+                    //     }
+                    // }
+                    assert!(face.distance_squared(&face2) >= 1. / 4096., "distance equals: {}, face 1 ID: {} {:?}, face 2 ID: {} {:?}", face.distance_squared(&face2), face.id, face.center(), face2.id, face2.center());
 
-                let factor = (difference.dot(&face.normal)).max(0.) * (-difference.dot(&face2.normal)).max(0.);
-                //if !intersects {
-                for i in 0..3 {
-                    face.last_iteration_brightness[i] += (face.color[i] as f32 / 256.)
-                        * face2.last_iteration_brightness[i]
-                        * (1. / face.distance_squared(&face2)) / 32. / 32.
-                        * factor;
+                    let factor = (difference.dot(&face.normal)).max(0.) * (-difference.dot(&face2.normal)).max(0.);
+                    //if !intersects {
+                    for i in 0..3 {
+                        face.last_iteration_brightness[i] += (face.color[i] as f32 / 256.)
+                            * face2.last_iteration_brightness[i]
+                            * (1. / face.distance_squared(&face2)) / 32. / 32.
+                            * factor;
+                    }
                 }
                 //}
             }

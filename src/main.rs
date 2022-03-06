@@ -64,7 +64,7 @@ fn main() {
         room_end_image
     ];
 
-    let hallway_brightness = 0.8;
+    let hallway_brightness = 0.4;
     let room_brightness = 2.0;
 
     voxel_to_mesh(straight_segment(&layers, hallway_brightness

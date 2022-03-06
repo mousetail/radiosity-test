@@ -107,10 +107,10 @@ impl Iterator for CubeSides {
 
 fn is_empty_or_out_of_bounds<const SIZE: usize>(voxels: &[[[RadiosityColor; SIZE]; SIZE]; SIZE], coords: (i32, i32, i32)) -> bool {
     if coords.0 < 0 || coords.1 < 0 || coords.2 < 0 {
-        return true;
+        return false;
     }
     if coords.0 >= SIZE as i32 || coords.1 >= SIZE as i32 || coords.2 >= SIZE as i32 {
-        return true;
+        return false;
     }
     return voxels[coords.0 as usize][coords.1 as usize][coords.2 as usize].color[3] == 0;
 }

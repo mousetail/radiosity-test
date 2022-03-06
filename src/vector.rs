@@ -46,6 +46,19 @@ impl Vec3 {
             z: self.z / distance
         }
     }
+
+    pub fn set_axis(&self, axis: Axis, value: f32) -> Vec3 {
+        match axis {
+            Axis::X => Vec3 {x: value, y: self.y, z: self.z},
+            Axis::Y => Vec3 {x: self.x, y: value, z: self.z},
+            Axis::Z => Vec3 {x: self.x, y: self.y, z: value}
+        }
+    }
+
+    pub fn reflect(&self, axis: Axis) -> Vec3 {
+        self.set_axis(axis, -self.get_axis(axis))
+
+    }
 }
 
 impl Add for Vec3 {
